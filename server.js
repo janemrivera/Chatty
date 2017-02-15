@@ -21,7 +21,7 @@ console.log('Listening on port: ', port);
 
 app.get('/webhook', (req, res) => {
     console.log("GET method");
-    console.log(req.body);
+    //console.log(req.body);
 
 });
 
@@ -39,10 +39,10 @@ app.post('/webhook', (req, res) => {
     loadMessage(msgId)
         .then((msg) => {
             let messageText = msg.text;
-            let chatId = msg.roomId;
+            let roomId = msg.roomId;
             //console.log(messageText);
             //console.log(chatId);
-            sendMessage(senderId, messageText);
+            sendMessage(senderId, messageText, roomId);
     })
     .catch((err) => {
         console.error("Error while loading message:", err)
