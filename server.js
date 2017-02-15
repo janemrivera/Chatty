@@ -90,19 +90,6 @@ app.post('/ai', (req, res) => {
 function sendMessage(sender, msgText, sRoomId, roomType) {
     //let sender = event.sender.id;
     //let text = event.message.text;
-  if(roomType == 'group')
-  {
-        var msg = {
-            roomId: sRoomId,
-            text: aiText
-        }
-  }
-  else{
-    var msg = {
-        toPersonId: sender,
-        text: aiText
-    }
-  }
 
     let apiai = apiaiApp.textRequest(msgText, {
         sessionId: 'tabby_cat' // use any arbitrary id
@@ -112,6 +99,19 @@ function sendMessage(sender, msgText, sRoomId, roomType) {
         // Got a response from api.ai. Let's POST spark
         let aiText = response.result.fulfillment.speech;
 
+        if(roomType == 'group')
+        {
+            var msg = {
+                roomId: sRoomId,
+                text: aiText
+            }
+        }
+        else{
+          var msg = {
+              toPersonId: sender,
+              text: aiText
+          }
+        }
         //var msg = {
         //    roomId: sRoomId,
         //    toPersonId: sender,
