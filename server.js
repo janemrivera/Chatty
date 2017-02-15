@@ -40,9 +40,9 @@ app.post('/webhook', (req, res) => {
         .then((msg) => {
             let messageText = msg.text;
             let chatId = msg.roomId;
-            //console.log(messageText);
+            console.log('Sender Id: ', senderId);
             console.log('Room Id:', chatId);
-            sendMessage(senderId, messageText, chatId);
+            sendMessage(senderId, messageText);
     })
     .catch((err) => {
         console.error("Error while loading message:", err)
