@@ -92,10 +92,16 @@ function sendMessage(sender, msgText, sRoomId, roomType) {
     //let text = event.message.text;
   if(roomType == 'group')
   {
-    let sender = '';
+        var msg = {
+            roomId: sRoomId,
+            text: aiText
+        }
   }
   else{
-    let sRoomId = '';
+    var msg = {
+        toPersonId: sender,
+        text: aiText
+    }
   }
 
     let apiai = apiaiApp.textRequest(msgText, {
@@ -106,11 +112,11 @@ function sendMessage(sender, msgText, sRoomId, roomType) {
         // Got a response from api.ai. Let's POST spark
         let aiText = response.result.fulfillment.speech;
 
-        var msg = {
-            roomId: sRoomId,
-            toPersonId: sender,
-            text: aiText
-        }
+        //var msg = {
+        //    roomId: sRoomId,
+        //    toPersonId: sender,
+        //    text: aiText
+        //}
 
         request.post('https://api.ciscospark.com/v1/messages',
             {
