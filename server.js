@@ -40,9 +40,11 @@ app.post('/webhook', (req, res) => {
         .then((msg) => {
             let messageText = msg.text;
             let chatId = msg.roomId;
+            let roomType = msg.roomType
             console.log('Sender Id: ', senderId);
             console.log('Room Id:', chatId);
-            sendMessage(senderId, messageText);
+            console.log('Message Type:', roomType);
+            sendMessage(senderId, messageText, chatId, roomType);
     })
     .catch((err) => {
         console.error("Error while loading message:", err)
@@ -85,10 +87,16 @@ app.post('/ai', (req, res) => {
 
 });
 
-function sendMessage(sender, msgText, sRoomId) {
+function sendMessage(sender, msgText, sRoomId, roomType) {
     //let sender = event.sender.id;
     //let text = event.message.text;
-
+  if(roomType == 'group')
+  {
+    let sender = '';
+  }
+  else{
+    let sRoomId = '';
+  }
 
     let apiai = apiaiApp.textRequest(msgText, {
         sessionId: 'tabby_cat' // use any arbitrary id
