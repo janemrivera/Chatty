@@ -39,10 +39,10 @@ app.post('/webhook', (req, res) => {
     loadMessage(msgId)
         .then((msg) => {
             let messageText = msg.text;
-            let roomId = msg.roomId;
+            let chatId = msg.roomId;
             //console.log(messageText);
-            //console.log(chatId);
-            sendMessage(senderId, messageText, roomId);
+            console.log('Room Id:', chatId);
+            sendMessage(senderId, messageText, chatId);
     })
     .catch((err) => {
         console.error("Error while loading message:", err)
