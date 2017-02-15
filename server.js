@@ -35,6 +35,11 @@ app.post('/webhook', (req, res) => {
 
     var msgId = updateObject.data.id;
     var senderId = updateObject.data.personId;
+    if (updateObject.data.personEmail && updateObject.data.personEmail.endsWith("@sparkbot.io"))
+    {
+        console.log("Message from bot. Skipping.");
+        return;
+    }
     //console.log(msgId);
     loadMessage(msgId)
         .then((msg) => {
