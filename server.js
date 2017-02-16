@@ -1,60 +1,68 @@
-var express = require('express');
-var bodyParser = require('body-parser');
-var request = require('request');
-var app = express();
+'use strict';
 
+const apiai = require('apiai');
+const express = require('express');
+const bodyParser = require('body-parser');
+const request = require('request');
+
+const SparkBot = require('./sparkbot');
+const SparkBotConfig = require('./sparkbotconfig');
+
+const REST_PORT = (process.env.PORT || 8080);
+const DEV_CONFIG = process.env.DEVELOPMENT_CONFIG == 'true';
+
+const APP_NAME = 'chattyexpressapp'; //process.env.APP_NAME;
+const APIAI_ACCESS_TOKEN = '4dc8d03e753c4a6db3907dd67380dcfe' ; //process.env.APIAI_ACCESS_TOKEN;
+const APIAI_LANG = 'en'; //process.env.APIAI_LANG;
+
+const SPARK_ACCESS_TOKEN = 'YzQ1NDdiMjQtY2RjMS00NDE0LThlZDUtNzUxN2E3MGNlNTQwYjM5NTRmNTYtODRk'; // process.env.SPARK_ACCESS_TOKEN;
+const OPENWEATHERMAP_APIID = 'f0cdb9e1184eaca0aeb54c211cbc56f3';
+
+var baseUrl = "";
+if (APP_NAME) {
+    // Heroku case
+    baseUrl = `https://${APP_NAME}.azurewebsites.net`;
+} else {
+    console.error('Set up the url of your service here and remove exit code!');
+    process.exit(1);
+}
+
+var bot;
+
+// console timestamps
+require('console-stamp')(console, 'yyyy.mm.dd HH:MM:ss.l');
+
+function startBot() {
+
+    console.log("Starting bot");
+
+    const botConfig = new SparkBotConfig(
+        APIAI_ACCESS_TOKEN,
+        APIAI_LANG,
+        SPARK_ACCESS_TOKEN);
+
+    botConfig.devConfig = DEV_CONFIG;
+
+    bot = new SparkBot(botConfig, baseUrl + '/webhook');
+    bot.setupWebhook();
+}
+
+startBot();
+
+const app = express();
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-var apiai = require('apiai');
-var apiaiApp = apiai('4dc8d03e753c4a6db3907dd67380dcfe');
-//Specify a port
-var port = process.env.port || 8080;
-
-//Serve up files in public folder
-app.use('/', express.static(__dirname + '/public'));
-
-//Start up the website
-app.listen(port);
-console.log('Listening on port: ', port);
-
-
-app.get('/webhook', (req, res) => {
-    console.log("GET method");
-    //console.log(req.body);
-
-});
-
-/* Handling all messenges */
 app.post('/webhook', (req, res) => {
-    console.log("message posted");
-    //console.log(req.body.entry.event.message.text);
-    //console.log(req.body);
-    let updateObject = req.body;
-    //console.log(req.body.id);
+    console.log('POST webhook');
 
-    var msgId = updateObject.data.id;
-    var senderId = updateObject.data.personId;
-    if (updateObject.data.personEmail && updateObject.data.personEmail.endsWith("@sparkbot.io"))
-    {
-        console.log("Message from bot. Skipping.");
-        return;
+    try {
+        if (bot) {
+            console.log('Processing message...');
+            bot.processMessage(req, res);
+        }
+    } catch (err) {
+        return res.status(400).send('Error while processing ' + err.message);
     }
-    //console.log(msgId);
-    loadMessage(msgId)
-        .then((msg) => {
-            let messageText = msg.text;
-            let chatId = msg.roomId;
-            let roomType = msg.roomType
-            console.log('Sender Id: ', senderId);
-            console.log('Room Id:', chatId);
-            console.log('Message Type:', roomType);
-            sendMessage(senderId, messageText, chatId, roomType);
-    })
-    .catch((err) => {
-        console.error("Error while loading message:", err)
-     });
-
 });
 
 app.post('/ai', (req, res) => {
@@ -64,7 +72,7 @@ app.post('/ai', (req, res) => {
     if (req.body.result.action === 'weather') {
         console.log('*** weather ***');
         let city = req.body.result.parameters['geo-city'];
-        let restUrl = 'http://api.openweathermap.org/data/2.5/weather?APPID=' + 'f0cdb9e1184eaca0aeb54c211cbc56f3' + '&q=' + city;
+        let restUrl = 'http://api.openweathermap.org/data/2.5/weather?APPID=' + OPENWEATHERMAP_APIID + '&q=' + city;
 
         request.get(restUrl, (err, response, body) => {
             if (!err && response.statusCode == 200) {
@@ -78,6 +86,7 @@ app.post('/ai', (req, res) => {
                     displayText: msg,
                     source: 'weather'
                 });
+                console.log('**weather response retrieved**');
             } else {
                 let errorMessage = 'I failed to look up the city name.';
                 return res.status(400).json({
@@ -92,79 +101,6 @@ app.post('/ai', (req, res) => {
 
 });
 
-function sendMessage(sender, msgText, sRoomId, roomType) {
-    //let sender = event.sender.id;
-    //let text = event.message.text;
-
-    let apiai = apiaiApp.textRequest(msgText, {
-        sessionId: 'tabby_cat' // use any arbitrary id
-    });
-
-    apiai.on('response', (response) => {
-        // Got a response from api.ai. Let's POST spark
-        let aiText = response.result.fulfillment.speech;
-
-        if(roomType == 'group')
-        {
-            var msg = {
-                roomId: sRoomId,
-                text: aiText
-            }
-        }
-        else{
-          var msg = {
-              toPersonId: sender,
-              text: aiText
-          }
-        }
-        //var msg = {
-        //    roomId: sRoomId,
-        //    toPersonId: sender,
-        //    text: aiText
-        //}
-
-        request.post('https://api.ciscospark.com/v1/messages',
-            {
-                auth: {
-                    bearer: 'YzQ1NDdiMjQtY2RjMS00NDE0LThlZDUtNzUxN2E3MGNlNTQwYjM5NTRmNTYtODRk'
-                },
-                json: msg
-            }, function (error, response) {
-                if (error) {
-                    console.log('Error sending message: ', error);
-                }
-            });
-
-
-    });
-
-    apiai.on('error', (error) => {
-        console.log(error);
-    });
-
-    apiai.end();
-
-}
-
-function loadMessage(messageId) {
-    return new Promise((resolve, reject) => {
-        request.get("https://api.ciscospark.com/v1/messages/" + messageId,
-            {
-                auth: {
-                    bearer: 'YzQ1NDdiMjQtY2RjMS00NDE0LThlZDUtNzUxN2E3MGNlNTQwYjM5NTRmNTYtODRk'
-                }
-            }, (err, resp, body) => {
-                if (err) {
-                    console.error('Error while reply:', err);
-                    reject(err);
-                } else if (resp.statusCode != 200) {
-                    console.log('LoadMessage error:', resp.statusCode, body);
-                    reject('LoadMessage error: ' + body);
-                } else {
-                    console.log("message body", body);
-                    let result = JSON.parse(body);
-                    resolve(result);
-                }
-            });
-    });
-}
+app.listen(REST_PORT, () => {
+    console.log('Rest service ready on port ' + REST_PORT);
+});
